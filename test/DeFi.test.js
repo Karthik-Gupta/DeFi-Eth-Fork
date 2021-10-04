@@ -290,8 +290,6 @@ const ERC20ABI = [
 	}
 ]
   
-  const DAI_ADDRESS = "0x6b175474e89094c44da98b954eedeac495271d0f"
-  
 const DAIAddress = "0x6b175474e89094c44da98b954eedeac495271d0f"
 const USDCAddress = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
 
@@ -300,30 +298,49 @@ const COINBASE = "0x503828976D22510aad0201ac7EC88293211D23Da"
 
 contract("DeFi", accounts => {
 let owner;
+let deFiInstance;
+let DAI_TokenContract;
 const INITIAL_AMOUNT = 9999;
     before(async function () {
         accounts = await web3.eth.getAccounts();
         owner = accounts[0];
         console.log("owner account is " , owner);
-        
+
+		// DeFi instance
+		deFiInstance = await DeFi.deployed();
+
         // set up DAI_TokenContract here from the DAI address   
-        DAI_TokenContract = new web3.eth.Contract(ERC20ABI, DAIAddress);
+        DAI_TokenContract = new web3.eth.Contract(ERC20ABI, DAIAddress, {from: COINBASE});
 
         // test that we have the correct contract
         const symbol = await DAI_TokenContract.methods.symbol().call();
-        console.log(symbol);
+        console.log("token symbol : " + symbol);
         // now transfer some DAI from the COINBASE account to the owner account
-        await DAI_TokenContract.methods.transferFrom(COINBASE, owner, 1e18);
-
+        await DAI_TokenContract.methods.transfer(owner, 10).send();
+		console.log("owner : " + await DAI_TokenContract.methods.balanceOf(owner).call());
     });
 
 
     it("should check transfer succeeded", async () => {
-        // write test to show transfer succeeded    
+        // write test to show transfer succeeded
         assert.notEqual(
-            await web3.eth.getBalance(owner),
+            DAI_TokenContract.methods.balanceOf(owner).call(),
             0,
             "Transfer not successful"
         );
     });
+
+	it("should send DAI to DeFi contract", async () => {
+		const deFiContractBalance = await web3.eth.getBalance(deFiInstance.address);
+		console.log(deFiContractBalance);
+
+		console.log(deFiInstance.address);
+
+		// send DAI to DeFi contract
+		await DAI_TokenContract.methods.transfer(deFiInstance.address, 99999999900000).send();
+		
+		//deFiInstance.address.balance.then(e => console.log(e));
+		//console.log(await deFiInstance.address.balance);
+		console.log(await web3.eth.getBalance(deFiInstance.address));
+	});
 });
